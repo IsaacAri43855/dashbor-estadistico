@@ -230,6 +230,11 @@ with tab_cualitativa:
         ax.set_title(f"Volumen por {var_cualitativa.replace('_', ' ')}", pad=15)
         ax.set_xlabel(None)
         ax.set_ylabel("Frecuencia Absoluta (fi)")
+        
+        # Evitar amontonamiento si hay muchas categorías cualitativas
+        if len(frec_cualita) > 10:
+            plt.xticks(rotation=45, ha='right', fontsize=8)
+            
         st.pyplot(fig)
         plt.close(fig)
         
@@ -249,7 +254,7 @@ with tab_cualitativa:
         plt.close(fig)
 
 # ==============================================================================
-# PESTAÑA 3: ANÁLISIS DISCRETO (DISCRETE NUMERICAL ANALYSIS)
+# PESTAÑA 3: ANÁLISIS DISCRETO (DISCRETE NUMERICAL ANALYSIS) - MEJORADA
 # ==============================================================================
 with tab_discreta:
     st.header("🔢 Distribución de Frecuencias de Variables Cuantitativas Discretas")
@@ -273,6 +278,11 @@ with tab_discreta:
         tabla_discreta["Fi"] = tabla_discreta["fi"].cumsum()
         tabla_discreta["Hi"] = tabla_discreta["hi"].cumsum()
         
+        # ALERTA DE ALTA CARDINALIDAD (Evita que el gráfico de bastones se vea como pared azul)
+        cant_valores_unicos = len(tabla_discreta)
+        if cant_valores_unicos > 25:
+            st.warning(f"⚠️ **Sugerencia de visualización:** La variable `{var_discreta}` posee {cant_valores_unicos} valores únicos. Para conjuntos de datos tan amplios, te recomendamos revisar la pestaña **Análisis Agrupado (Sturges)** para verlos agrupados en rangos cómodos. No obstante, hemos optimizado este gráfico de bastones para ti:")
+            
         st.write("**Estructura de Distribución de Frecuencias Discretas:**")
         st.dataframe(tabla_discreta.style.format({
             "Valor_X": "{:.2f}",
@@ -281,26 +291,56 @@ with tab_discreta:
             "Hi": "{:.4f}"
         }), use_container_width=True)
         
-        # Visualización mediante Diagrama de Bastones
+        # Visualización mediante Diagrama de Bastones Mejorado e Inteligente
         st.subheader("🖼️ Diagrama de Bastones (Lollipop Chart)")
         fig, ax = plt.subplots(figsize=(12, 5))
+        
+        # --- AJUSTE DINÁMICO DE GROSOR Y TAMAÑO PARA EVITAR "PAREDES" ---
+        if cant_valores_unicos > 100:
+            grosor_linea = 0.4
+            tamano_punto = 1.5
+        elif cant_valores_unicos > 50:
+            grosor_linea = 0.8
+            tamano_punto = 3.0
+        elif cant_valores_unicos > 25:
+            grosor_linea = 1.2
+            tamano_punto = 4.0
+        else:
+            grosor_linea = 2.0
+            tamano_punto = 6.0
+            
+        # Dibujar bastones finos adaptativos
         ax.vlines(
             x=tabla_discreta['Valor_X'], 
             ymin=0, 
             ymax=tabla_discreta['fi'], 
             colors='#3B82F6', 
-            linewidth=2,
+            linewidth=grosor_linea,
             alpha=0.7
         )
+        
+        # Puntos de frecuencia adaptativos
         ax.plot(
             tabla_discreta['Valor_X'], 
             tabla_discreta['fi'], 
             "o", 
             color='#EF4444', 
-            markersize=8,
+            markersize=tamano_punto,
             label="Frecuencia Absoluta"
         )
-        ax.set_xticks(tabla_discreta['Valor_X'])
+        
+        # --- EVITAR AMONTONAMIENTO EN EL EJE X: Selección inteligente de marcas ---
+        if cant_valores_unicos > 15:
+            # Seleccionamos exactamente 15 marcas distribuidas a lo largo del eje X
+            indices_a_mostrar = np.linspace(0, cant_valores_unicos - 1, num=15, dtype=int)
+            ticks_a_mostrar = tabla_discreta['Valor_X'].iloc[indices_a_mostrar]
+            ax.set_xticks(ticks_a_mostrar)
+            # Rotar textos para que queden diagonales y legibles
+            plt.xticks(rotation=45, ha='right', fontsize=9)
+        else:
+            # Si son pocos, mostrar todos con total normalidad
+            ax.set_xticks(tabla_discreta['Valor_X'])
+            
         ax.set_title(f"Distribución Detallada de {var_discreta.replace('_', ' ')}", pad=15)
         ax.set_xlabel("Valor Variable (X)")
         ax.set_ylabel("Frecuencia (fi)")
